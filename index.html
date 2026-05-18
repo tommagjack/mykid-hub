@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My Kid's Hub - คลินิกพัฒนาการเด็กบ้านฮักดี</title>
+    
+    <!-- Google Fonts: Noto Sans Thai -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: 'rgb(200, 169, 126)',
+                        primaryLight: 'rgba(200, 169, 126, 0.1)',
+                        textMain: '#222222',
+                        textSub: '#777777',
+                        bgMain: '#F8F9FA'
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans Thai"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px rgba(0, 0, 0, 0.05)',
+                        'floating': '0 10px 40px rgba(200, 169, 126, 0.15)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- SwiperJS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Day.js -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/th.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/buddhistEra.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/timezone.js"></script>
+    
+    <style>
+        body {
+            background-color: #e5e7eb; 
+            overscroll-behavior-y: none; 
+        }
+        
+        #app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: #F8F9FA;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bottom-sheet-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 50; opacity: 0; visibility: hidden;
+            transition: all 0.3s ease; display: flex; align-items: flex-end; justify-content: center;
+        }
+        .bottom-sheet-overlay.active { opacity: 1; visibility: visible; }
+        .bottom-sheet {
+            background: white; width: 100%; max-width: 480px; height: 85vh;
+            border-radius: 24px 24px 0 0; transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1);
+            display: flex; flex-direction: column;
+        }
+        .bottom-sheet-overlay.active .bottom-sheet { transform: translateY(0); }
+        .sheet-handle { width: 40px; height: 5px; background: #EAEAEA; border-radius: 10px; margin: 12px auto; }
+        
+        .swiper-pagination-bullet-active { background-color: rgb(200, 169, 126) !important; }
+        
+        /* ซ่อน Scrollbar สำหรับแถบเมนู Admin */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-textMain">
+    <div id="app-container">
+        <!-- Main Content Area -->
+        <main id="main-content" class="pb-24 min-h-screen"></main>
+
+        <!-- Bottom Navigation -->
+        <nav id="bottom-nav" class="fixed bottom-0 w-full max-w-[480px] bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-40 hidden shadow-[0_-4px_20px_rgba(0,0,0,0.03)] pb-safe rounded-t-2xl">
+            <button onclick="navigate('dashboard')" class="nav-item flex flex-col items-center gap-1 text-textSub transition-colors" data-page="dashboard">
+                <i data-lucide="home" class="w-6 h-6"></i>
+                <span class="text-[10px] font-medium">หน้าหลัก</span>
+            </button>
+            <button onclick="navigate('appointments')" class="nav-item flex flex-col items-center gap-1 text-textSub transition-colors" data-page="appointments">
+                <i data-lucide="calendar" class="w-6 h-6"></i>
+                <span class="text-[10px] font-medium">นัดหมาย</span>
+            </button>
+            <button onclick="navigate('history')" class="nav-item flex flex-col items-center gap-1 text-textSub transition-colors" data-page="history">
+                <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+                <span class="text-[10px] font-medium">ประวัติ</span>
+            </button>
+            <button onclick="navigate('rewards')" class="nav-item flex flex-col items-center gap-1 text-textSub transition-colors" data-page="rewards">
+                <i data-lucide="gift" class="w-6 h-6"></i>
+                <span class="text-[10px] font-medium">คะแนน</span>
+            </button>
+            <button onclick="navigate('profile')" class="nav-item flex flex-col items-center gap-1 text-textSub transition-colors" data-page="profile">
+                <i data-lucide="user" class="w-6 h-6"></i>
+                <span class="text-[10px] font-medium">โปรไฟล์</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Global Bottom Sheet Modal -->
+    <div id="global-bottom-sheet" class="bottom-sheet-overlay">
+        <div class="bottom-sheet shadow-2xl">
+            <div class="sheet-handle"></div>
+            <div id="bottom-sheet-content" class="flex-1 overflow-y-auto px-6 pb-6 pt-2"></div>
+        </div>
+    </div>
+
+    <script>
+        dayjs.locale('th');
+        dayjs.extend(window.dayjs_plugin_buddhistEra);
+        dayjs.extend(window.dayjs_plugin_utc);
+        dayjs.extend(window.dayjs_plugin_timezone);
+        dayjs.tz.setDefault("Asia/Bangkok");
+        
+        // =====================================
+        // CONFIG & STATE
+        // =====================================
+        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwdUP0_N24bRLr4Dyysf9pBu5bnMYVkkIYhirbjswSMUHCEvxQf0YlcjpwdHULEPsLw/exec';
+        
+        const State = {
+            currentUser: null,
+            currentPage: 'landing',
+            currentData: null,
+            settings: {}
+        };
+
+        // =====================================
+        // API SERVICE
+        // =====================================
+        const API = {
+            async call(action, payload = {}, showLoading = true) {
+                if (showLoading) {
+                    Swal.fire({ title: 'กำลังโหลด...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                }
+                
+                try {
+                    // Send as plain text to avoid CORS preflight issues on Google Apps Script
+                    const response = await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action, payload })
+                    });
+                    
+                    const data = await response.json();
+                    if (showLoading) Swal.close();
+                    
+                    if (!data.success) throw new Error(data.message);
+                    return data.data;
+                } catch (error) {
+                    if (showLoading) Swal.close();
+                    // โยน Error ให้ UI จัดการแสดงผล (SweetAlert) แทนการใช้ console.error
+                    throw error;
+                }
+            }
+        };
+
+        const Utils = {
+            formatDate: (isoString, format = 'DD MMM BBBB') => isoString ? dayjs(isoString).tz('Asia/Bangkok').format(format) : '-',
+            formatTime: (isoString) => isoString ? dayjs(isoString).tz('Asia/Bangkok').format('HH:mm น.') : '-',
+            closeBottomSheet: () => {
+                document.getElementById('global-bottom-sheet').classList.remove('active');
+                setTimeout(() => document.getElementById('bottom-sheet-content').innerHTML = '', 300);
+            },
+            openBottomSheet: (htmlContent) => {
+                document.getElementById('bottom-sheet-content').innerHTML = htmlContent;
+                document.getElementById('global-bottom-sheet').classList.add('active');
+                lucide.createIcons();
+            }
+        };
+
+        // Cache System สำหรับเร่งความเร็วการโหลดหน้าต่าง ๆ ให้ < 0.1 วิ (SWR Pattern)
+        const Cache = {
+            get: (key) => {
+                try { return JSON.parse(localStorage.getItem('hub_cache_' + key)); } 
+                catch(e) { return null; }
+            },
+            set: (key, data) => {
+                try { localStorage.setItem('hub_cache_' + key, JSON.stringify(data)); } 
+                catch(e) {}
+            },
+            clear: () => {
+                try {
+                    Object.keys(localStorage).forEach(key => {
+                        if(key.startsWith('hub_cache_')) localStorage.removeItem(key);
+                    });
+                } catch(e) {}
+            }
+        };
+
+        // ฟังก์ชันล้างแคชเมื่อกดปุ่ม Refresh วงกลม
+        function refreshPage(page) {
+            const actionMap = { 'dashboard': 'getDashboard', 'appointments': 'getAppointments', 'history': 'getHistory', 'rewards': 'getRewards', 'profile': 'getProfile' };
+            if(actionMap[page]) Cache.set(actionMap[page], null);
+            navigate(page);
+        }
+
+        // =====================================
+        // NAVIGATION CONTROLLER
+        // =====================================
+        async function navigate(page) {
+            State.currentPage = page;
+            const mainContent = document.getElementById('main-content');
+            const bottomNav = document.getElementById('bottom-nav');
+            
+            // UI Reset & Active State
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('text-primary'); el.classList.add('text-textSub');
+            });
+            const activeNav = document.querySelector(`.nav-item[data-page="${page}"]`);
+            if (activeNav) { activeNav.classList.remove('text-textSub'); activeNav.classList.add('text-primary'); }
+
+            const renderUI = (data) => {
+                State.currentData = data;
+                mainContent.className = 'pb-24 min-h-screen fade-in';
+                
+                switch(page) {
+                    case 'landing':
+                        bottomNav.classList.add('hidden');
+                        mainContent.innerHTML = Views.Landing();
+                        break;
+                    case 'dashboard':
+                        bottomNav.classList.remove('hidden');
+                        mainContent.innerHTML = Views.Dashboard(data);
+                        initSwiper();
+                        break;
+                    case 'appointments':
+                        bottomNav.classList.remove('hidden');
+                        mainContent.innerHTML = Views.Appointments(data);
+                        break;
+                    case 'history':
+                        bottomNav.classList.remove('hidden');
+                        mainContent.innerHTML = Views.History(data);
+                        break;
+                    case 'rewards':
+                        bottomNav.classList.remove('hidden');
+                        mainContent.innerHTML = Views.Rewards(data);
+                        break;
+                    case 'profile':
+                        bottomNav.classList.remove('hidden');
+                        mainContent.innerHTML = Views.Profile(data);
+                        break;
+                    case 'admin':
+                        bottomNav.classList.add('hidden');
+                        mainContent.innerHTML = Views.Admin();
+                        break;
+                }
+                lucide.createIcons();
+            };
+
+            if (page === 'landing' || page === 'admin') {
+                renderUI({});
+                return;
+            }
+
+            const actionMap = {
+                'dashboard': 'getDashboard',
+                'appointments': 'getAppointments',
+                'history': 'getHistory',
+                'rewards': 'getRewards',
+                'profile': 'getProfile'
+            };
+
+            const action = actionMap[page];
+            const payload = { hn: State.currentUser.hn };
+            
+            // 1. Try Cache for instant load (ทำให้ผู้ปกครองรู้สึกว่าโหลดเสร็จในเสี้ยววิ)
+            const cachedData = Cache.get(action);
+            if (cachedData) {
+                renderUI(cachedData);
+                // Background update แบบเงียบๆ ดึงข้อมูลใหม่ตลอด
+                API.call(action, payload, false).then(freshData => {
+                    Cache.set(action, freshData);
+                    // อัปเดตหน้าจอแบบไร้รอยต่อ หากพบข้อมูลที่สดใหม่กว่า
+                    if(page === State.currentPage && JSON.stringify(cachedData) !== JSON.stringify(freshData)) {
+                        renderUI(freshData);
+                    }
+                }).catch(()=>{});
+            } else {
+                // 2. ถ้าเข้าครั้งแรก ยังไม่มี Cache ให้แสดง Loading Skeleton สวยๆ
+                const skeletonHtml = `
+                    <div class="px-6 py-12 space-y-6 animate-pulse">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="h-8 bg-gray-200 rounded w-1/3"></div>
+                            <div class="h-8 w-8 bg-gray-200 rounded-full"></div>
+                        </div>
+                        <div class="h-32 bg-gray-200 rounded-3xl w-full"></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="h-24 bg-gray-200 rounded-3xl w-full"></div>
+                            <div class="h-24 bg-gray-200 rounded-3xl w-full"></div>
+                        </div>
+                        <div class="h-24 bg-gray-200 rounded-3xl w-full"></div>
+                        <div class="h-24 bg-gray-200 rounded-3xl w-full"></div>
+                    </div>
+                `;
+                mainContent.innerHTML = skeletonHtml;
+                bottomNav.classList.remove('hidden');
+                try {
+                    const freshData = await API.call(action, payload, false);
+                    Cache.set(action, freshData);
+                    renderUI(freshData);
+                } catch(error) {
+                    Swal.fire('เกิดข้อผิดพลาด', error.message || 'ไม่สามารถโหลดข้อมูลได้', 'error');
+                    if(!State.currentUser) { logout(); }
+                }
+            }
+        }
+
+        async function login(e) {
+            e.preventDefault();
+            const hn = document.getElementById('login-hn').value.trim();
+            const phone = document.getElementById('login-phone').value.trim();
+
+            try {
+                const user = await API.call('login', { hn, phone });
+                State.currentUser = user;
+                localStorage.setItem('hub_session', JSON.stringify(user));
+                Cache.clear(); // ล้างแคชเก่าออกเผื่อสลับ Account
+                Utils.closeBottomSheet();
+                
+                if(user.role === 'admin') {
+                    navigate('admin');
+                } else {
+                    navigate('dashboard');
+                    Swal.fire({ icon: 'success', title: 'เข้าสู่ระบบสำเร็จ', text: `ยินดีต้อนรับ ${user.parentName || user.name}`, confirmButtonColor: 'rgb(200, 169, 126)', timer: 1500 });
+                }
+            } catch(err) {
+                Swal.fire({ icon: 'error', title: 'เข้าสู่ระบบไม่สำเร็จ', text: err.message, confirmButtonColor: 'rgb(200, 169, 126)' });
+            }
+        }
+
+        function logout() {
+            Swal.fire({ title: 'ต้องการออกจากระบบ?', icon: 'question', showCancelButton: true, confirmButtonColor: 'rgb(200, 169, 126)', cancelButtonColor: '#EAEAEA', confirmButtonText: 'ออกจากระบบ', cancelButtonText: '<span class="text-textMain">ยกเลิก</span>'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    State.currentUser = null;
+                    localStorage.removeItem('hub_session');
+                    Cache.clear(); // ล้างข้อมูลแคช
+                    navigate('landing');
+                }
+            });
+        }
+
+        // =====================================
+        // VIEWS (HTML Templates)
+        // =====================================
+        const Views = {
+            Landing: () => {
+                const bgImage = State.settings?.main_image_url || 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?q=80&w=1000&auto=format&fit=crop';
+                const logoImage = State.settings?.logo_url;
+                
+                const logoHtml = logoImage 
+                    ? `<img src="${logoImage}" class="w-20 h-20 rounded-full mx-auto mb-6 object-cover border-2 border-primary/30 shadow-md">`
+                    : `<div class="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-sm border border-primary/30">
+                            <i data-lucide="heart-handshake" class="w-10 h-10 text-primary"></i>
+                       </div>`;
+
+                return `
+                <div class="h-screen w-full relative flex flex-col justify-end bg-gray-900">
+                    <img src="${bgImage}" class="absolute inset-0 w-full h-full object-cover opacity-50" alt="Background">
+                    <div class="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent"></div>
+                    
+                    <div class="relative z-10 p-8 pb-16 text-center">
+                        ${logoHtml}
+                        <h1 class="text-4xl font-bold text-textMain mb-2 tracking-tight">My Kid's Hub</h1>
+                        <h2 class="text-lg text-primary font-medium mb-4">คลินิกพัฒนาการเด็กบ้านฮักดี</h2>
+                        <p class="text-textSub text-sm mb-10 leading-relaxed max-w-[280px] mx-auto">
+                            ติดตามพัฒนาการของน้องๆ ผ่านความรัก และความเอาใจใส่จากเรา
+                        </p>
+                        <button onclick="Views.showLoginModal()" class="w-full bg-primary text-white rounded-full py-4 font-semibold text-lg shadow-floating hover:scale-[1.02] transition-transform flex items-center justify-center gap-2">
+                            เข้าใช้งานระบบ <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+                `;
+            },
+            
+            showLoginModal: () => {
+                const html = `
+                    <div class="text-center mb-8">
+                        <h3 class="text-2xl font-bold text-textMain mb-2">ยินดีต้อนรับ</h3>
+                        <p class="text-textSub text-sm">กรุณากรอกข้อมูลเข้าสู่ระบบของคุณ</p>
+                    </div>
+                    <form onsubmit="login(event)" class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-medium text-textMain mb-2">รหัสผู้รับบริการ (HN no.)</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <i data-lucide="credit-card" class="w-5 h-5 text-gray-400"></i>
+                                </div>
+                                <input type="text" inputmode="numeric" id="login-hn" required placeholder="เช่น 68001" value="" class="w-full pl-11 pr-4 py-3.5 bg-bgMain border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-textMain mb-2">เบอร์โทรศัพท์ผู้ปกครอง</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <i data-lucide="phone" class="w-5 h-5 text-gray-400"></i>
+                                </div>
+                                <input type="text" inputmode="tel" id="login-phone" required placeholder="เช่น 0123456789" value="" class="w-full pl-11 pr-4 py-3.5 bg-bgMain border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-primary text-white rounded-full py-4 font-semibold text-lg shadow-soft mt-8">
+                            เข้าสู่ระบบ
+                        </button>
+                        <button type="button" onclick="Views.forgotHN()" class="w-full text-textSub text-sm font-medium mt-3 hover:text-primary transition-colors underline decoration-1 underline-offset-4">
+                            ไม่ทราบหรือลืมรหัส HN
+                        </button>
+                    </form>
+                `;
+                Utils.openBottomSheet(html);
+            },
+
+            forgotHN: () => {
+                Swal.fire({
+                    title: 'ไม่ทราบหรือลืมรหัส HN',
+                    html: 'โปรดติดต่อคลินิก<br>โทร. <span class="font-bold text-primary">0946753557</span>',
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonColor: 'rgb(200, 169, 126)',
+                    cancelButtonColor: '#EAEAEA',
+                    confirmButtonText: 'โทรออกเลย',
+                    cancelButtonText: '<span class="text-textMain">ปิด</span>'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = 'tel:0946753557';
+                    }
+                });
+            },
+
+            Dashboard: (data) => {
+                const user = State.currentUser;
+                const course = data.course || {};
+                const upcomingAppt = data.upcomingAppointment;
+                const news = data.news || [];
+                
+                return `
+                    <header class="bg-white px-6 pt-6 pb-6 rounded-b-3xl shadow-soft relative z-10">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-4">
+                                <img src="${user.avatar}" class="w-14 h-14 rounded-full border-2 border-primaryLight object-cover">
+                                <div>
+                                    <p class="text-xs text-textSub font-medium mb-0.5">ยินดีต้อนรับ</p>
+                                    <h2 class="text-base font-bold text-textMain leading-tight">${user.parentName}</h2>
+                                </div>
+                            </div>
+                            <button onclick="refreshPage('dashboard')" class="relative p-2 bg-bgMain rounded-full text-textMain hover:bg-gray-200 transition-colors">
+                                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </header>
+
+                    <div class="px-6 py-6 space-y-6">
+                        <div class="bg-gradient-to-br from-primary to-[#b89565] rounded-3xl p-6 text-white shadow-floating relative overflow-hidden">
+                            <div class="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                            <div class="flex justify-between items-start relative z-10">
+                                <div>
+                                    <p class="text-white/80 text-xs mb-1 font-medium">ข้อมูลผู้รับบริการ</p>
+                                    <h3 class="text-2xl font-bold mb-1">${user.patientName}</h3>
+                                    <p class="text-sm text-white/90">${user.nickname ? (user.nickname.startsWith('น้อง') ? user.nickname : 'น้อง' + user.nickname) : ''} • HN: ${user.hn}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-white p-5 rounded-3xl shadow-soft border border-gray-50 flex flex-col justify-center">
+                                <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center mb-3">
+                                    <i data-lucide="layers" class="w-5 h-5"></i>
+                                </div>
+                                <p class="text-xs text-textSub font-medium mb-1">คอร์สคงเหลือ</p>
+                                <div class="flex items-baseline gap-1">
+                                    <span class="text-2xl font-bold text-textMain">${course.remaining_course || 0}</span>
+                                    <span class="text-sm text-textSub">/ ${course.total_course || 0} ครั้ง</span>
+                                </div>
+                            </div>
+
+                            <div onclick="navigate('rewards')" class="bg-white p-5 rounded-3xl shadow-soft border border-gray-50 flex flex-col justify-center cursor-pointer">
+                                <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center mb-3">
+                                    <i data-lucide="star" class="w-5 h-5"></i>
+                                </div>
+                                <p class="text-xs text-textSub font-medium mb-1">คะแนนสะสม</p>
+                                <div class="flex items-baseline gap-1">
+                                    <span class="text-2xl font-bold text-textMain">${course.point_balance || 0}</span>
+                                    <span class="text-sm text-textSub">แต้ม</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-end mb-4">
+                                <h3 class="text-lg font-bold text-textMain">นัดหมายครั้งต่อไป</h3>
+                                <button onclick="navigate('appointments')" class="text-sm text-primary font-medium">ดูทั้งหมด</button>
+                            </div>
+                            ${upcomingAppt ? `
+                                <div class="bg-white p-5 rounded-3xl shadow-soft border border-gray-50 flex items-center gap-4">
+                                    <div class="bg-primaryLight text-primary p-3 rounded-2xl flex flex-col items-center justify-center min-w-[60px]">
+                                        <span class="text-sm font-bold">${dayjs(upcomingAppt.appointment_date).format('DD')}</span>
+                                        <span class="text-xs">${dayjs(upcomingAppt.appointment_date).format('MMM')}</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-textMain mb-1">${upcomingAppt.appointment_type}</h4>
+                                        <p class="text-xs text-textSub flex items-center gap-1">
+                                            <i data-lucide="clock" class="w-3 h-3"></i> ${Utils.formatTime(upcomingAppt.appointment_date)}
+                                            <span class="mx-1">•</span>
+                                            <i data-lucide="user" class="w-3 h-3"></i> ${upcomingAppt.therapist}
+                                        </p>
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="bg-white p-6 rounded-3xl shadow-soft border border-gray-50 text-center text-textSub text-sm">ไม่มีนัดหมายในเร็วๆ นี้</div>
+                            `}
+                        </div>
+
+                        ${news.length ? `
+                        <div>
+                            <h3 class="text-lg font-bold text-textMain mb-4">ข่าวสารและความรู้</h3>
+                            <div class="swiper newsSwiper rounded-2xl overflow-hidden shadow-soft">
+                                <div class="swiper-wrapper">
+                                    ${news.map(n => `
+                                        <div class="swiper-slide relative">
+                                            <img src="${n.image_url}" class="w-full h-40 object-cover">
+                                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
+                                                <h4 class="text-white font-medium text-sm line-clamp-2">${n.title}</h4>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="swiper-pagination"></div>
+                            </div>
+                        </div>` : ''}
+                    </div>
+                `;
+            },
+
+            Appointments: (data) => {
+                const renderCard = (appt, isUpcoming) => `
+                    <div class="bg-white p-5 rounded-3xl shadow-soft border border-gray-50 flex items-center gap-4 mb-4">
+                        <div class="${isUpcoming ? 'bg-primaryLight text-primary' : 'bg-gray-100 text-gray-500'} p-3 rounded-2xl flex flex-col items-center justify-center min-w-[60px]">
+                            <span class="text-sm font-bold">${dayjs(appt.appointment_date).format('DD')}</span>
+                            <span class="text-xs">${dayjs(appt.appointment_date).format('MMM')}</span>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-textMain mb-1">${appt.appointment_type}</h4>
+                            <p class="text-xs text-textSub flex items-center gap-1">
+                                <i data-lucide="clock" class="w-3 h-3"></i> ${Utils.formatTime(appt.appointment_date)}
+                                <span class="mx-1">•</span> <i data-lucide="user" class="w-3 h-3"></i> ${appt.therapist}
+                            </p>
+                        </div>
+                        ${isUpcoming ? `<span class="px-2 py-1 bg-green-50 text-green-600 rounded-lg text-[10px] font-bold">รอรับบริการ</span>` : `<span class="px-2 py-1 bg-gray-50 text-gray-500 rounded-lg text-[10px] font-bold">เสร็จสิ้น</span>`}
+                    </div>
+                `;
+                return `
+                    <div class="bg-white px-6 pt-6 pb-4 sticky top-0 z-20 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-textMain">การนัดหมาย</h2>
+                        <button onclick="refreshPage('appointments')"><i data-lucide="refresh-cw" class="w-5 h-5 text-gray-400"></i></button>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-sm font-bold text-textSub mb-4">นัดหมายที่กำลังมาถึง</h3>
+                        ${data.upcoming?.length ? data.upcoming.map(a => renderCard(a, true)).join('') : '<p class="text-sm text-center text-gray-400 py-4">ไม่มีนัดหมาย</p>'}
+                        <h3 class="text-sm font-bold text-textSub mt-8 mb-4">ประวัตินัดหมาย</h3>
+                        ${data.past?.length ? data.past.map(a => renderCard(a, false)).join('') : '<p class="text-sm text-center text-gray-400 py-4">ไม่มีประวัติ</p>'}
+                    </div>
+                `;
+            },
+
+            History: (history) => `
+                <div class="bg-white px-6 pt-6 pb-4 sticky top-0 z-20 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-textMain">ประวัติการฝึก</h2>
+                    <button onclick="refreshPage('history')"><i data-lucide="refresh-cw" class="w-5 h-5 text-gray-400"></i></button>
+                </div>
+                <div class="p-6 space-y-4">
+                    ${history?.length ? history.map(h => `
+                        <div class="bg-white p-5 rounded-3xl shadow-soft border border-gray-50">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <p class="text-xs text-textSub mb-1">${Utils.formatDate(h.service_date)}</p>
+                                    <h4 class="font-bold text-textMain">${h.type || h.appointment_type || 'กิจกรรมบำบัด'}</h4>
+                                </div>
+                                <div class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold">${h.therapist}</div>
+                            </div>
+                            <p class="text-sm text-textSub line-clamp-2 mb-4 leading-relaxed">${h.training_detail || h.detail || '-'}</p>
+                            <button onclick='Views.showHistoryDetail(${JSON.stringify(h).replace(/'/g, "&apos;")})' class="w-full py-2.5 bg-bgMain text-textMain rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors">
+                                ดูสรุปผลการฝึก
+                            </button>
+                        </div>
+                    `).join('') : '<p class="text-sm text-center text-gray-400 py-10">ไม่มีประวัติการฝึก</p>'}
+                </div>
+            `,
+
+            showHistoryDetail: (data) => {
+                const html = `
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-lucide="clipboard-check" class="w-8 h-8 text-blue-500"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-textMain mb-1">${data.type || data.appointment_type || 'รายละเอียด'}</h3>
+                        <p class="text-sm text-textSub">${Utils.formatDate(data.service_date)} • ${data.therapist}</p>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-bgMain p-4 rounded-2xl">
+                            <h4 class="text-xs font-bold text-textSub mb-2 uppercase tracking-wider">รายละเอียดกิจกรรม</h4>
+                            <p class="text-sm text-textMain leading-relaxed">${data.training_detail || data.detail || '-'}</p>
+                        </div>
+                        <div class="bg-primaryLight/30 border border-primary/20 p-4 rounded-2xl relative overflow-hidden">
+                            <div class="absolute top-0 right-0 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">AI Summary</div>
+                            <h4 class="text-xs font-bold text-primary mb-2 flex items-center gap-1"><i data-lucide="sparkles" class="w-3 h-3"></i> สรุปผลและคำแนะนำ</h4>
+                            <p class="text-sm text-textMain leading-relaxed">${data.ai_summary || data.aiSummary || '-'}</p>
+                        </div>
+                    </div>
+                `;
+                Utils.openBottomSheet(html);
+            },
+
+            Rewards: (data) => {
+                window.currentPoints = data.points || 0;
+                return `
+                    <div class="bg-white px-6 pt-6 pb-4 sticky top-0 z-20 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-textMain">ระบบคะแนนสะสม</h2>
+                            <button onclick="refreshPage('rewards')"><i data-lucide="refresh-cw" class="w-5 h-5 text-gray-400"></i></button>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-6 text-white relative overflow-hidden shadow-lg">
+                            <i data-lucide="star" class="absolute -right-4 -bottom-4 w-32 h-32 text-white/5"></i>
+                            <p class="text-white/70 text-sm mb-1">คะแนนปัจจุบันของคุณ</p>
+                            <div class="flex items-baseline gap-2">
+                                <span class="text-4xl font-bold tracking-tight text-primary">${window.currentPoints}</span>
+                                <span class="text-sm text-white/80">แต้ม</span>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4 mt-6 border-b border-gray-100">
+                            <button onclick="switchTab('redeem')" id="tab-btn-redeem" class="pb-3 text-sm font-bold text-primary border-b-2 border-primary px-2 transition-all">แลกของรางวัล</button>
+                            <button onclick="switchTab('history')" id="tab-btn-history" class="pb-3 text-sm font-bold text-textSub border-b-2 border-transparent px-2 transition-all">ประวัติการแลก</button>
+                        </div>
+                    </div>
+
+                    <div id="tab-content-redeem" class="p-6 grid grid-cols-2 gap-4">
+                        ${data.rewards?.map(r => `
+                            <div class="bg-white rounded-2xl p-3 shadow-soft border border-gray-50 flex flex-col">
+                                <div class="bg-bgMain rounded-xl aspect-square mb-3 relative overflow-hidden flex items-center justify-center">
+                                    <img src="${r.reward_url || 'https://placehold.co/200/c8a97e/fff?text=Reward'}" class="w-full h-full object-cover">
+                                    ${r.quantity <= 5 ? `<span class="absolute top-2 right-2 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">เหลือ ${r.quantity}</span>` : ''}
+                                </div>
+                                <h4 class="font-bold text-sm text-textMain line-clamp-2 mb-1 leading-tight">${r.reward_name}</h4>
+                                <div class="mt-auto pt-2 flex items-center justify-between">
+                                    <span class="text-primary font-bold text-sm">${r.point_required} <span class="text-[10px] font-normal">แต้ม</span></span>
+                                </div>
+                                <button onclick='confirmRedeem(${JSON.stringify(r).replace(/'/g, "&apos;")})' class="w-full mt-3 py-2 bg-textMain text-white rounded-lg text-xs font-semibold ${window.currentPoints >= r.point_required && r.quantity > 0 ? 'hover:bg-black' : 'opacity-50 cursor-not-allowed'}">
+                                    ${r.quantity <= 0 ? 'ของหมด' : (window.currentPoints >= r.point_required ? 'แลกรางวัล' : 'คะแนนไม่พอ')}
+                                </button>
+                            </div>
+                        `).join('') || '<p class="text-sm col-span-2 text-center text-gray-400 py-10">ยังไม่มีของรางวัลในขณะนี้</p>'}
+                    </div>
+
+                    <div id="tab-content-history" class="p-6 hidden space-y-4">
+                        ${data.history?.map(h => `
+                            <div class="bg-white p-4 rounded-2xl shadow-soft border border-gray-50 flex justify-between items-center">
+                                <div>
+                                    <p class="text-[10px] text-textSub mb-0.5">${Utils.formatDate(h.redeemed_at)}</p>
+                                    <h4 class="font-bold text-sm text-textMain mb-1">${h.reward_name}</h4>
+                                    <span class="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-[10px] font-mono tracking-widest">${h.coupon_code}</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-[10px] font-bold text-green-500 bg-green-50 px-2 py-1 rounded-full">${h.status}</span>
+                                </div>
+                            </div>
+                        `).join('') || '<p class="text-sm text-center text-gray-400 py-10">ยังไม่มีประวัติการแลก</p>'}
+                    </div>
+                `;
+            },
+
+            Profile: (data) => {
+                const user = State.currentUser;
+                const assessment = data.latestAssessment;
+                const dashboardData = Cache.get('getDashboard') || {};
+                const points = window.currentPoints || dashboardData.course?.point_balance || 0;
+                
+                return `
+                    <div class="bg-primary px-6 pt-8 pb-20 relative rounded-b-[40px]">
+                        <h2 class="text-2xl font-bold text-white text-center">โปรไฟล์</h2>
+                    </div>
+                    <div class="px-6 -mt-12 relative z-10 space-y-6">
+                        <div class="bg-white p-6 rounded-3xl shadow-floating text-center">
+                            <img src="${user.avatar}" class="w-24 h-24 rounded-full border-4 border-white shadow-md object-cover mx-auto mb-4">
+                            <h3 class="text-xl font-bold text-textMain">${user.patientName}</h3>
+                            <p class="text-sm text-textSub mb-4">${user.nickname ? (user.nickname.startsWith('น้อง') ? user.nickname : 'น้อง' + user.nickname) : ''} • HN: ${user.hn}</p>
+                            <div class="bg-bgMain rounded-2xl p-4 text-left grid grid-cols-2 gap-y-4 gap-x-2">
+                                <div><p class="text-[10px] text-textSub">วันเกิด</p><p class="text-sm font-semibold text-textMain">${Utils.formatDate(user.birthDate)}</p></div>
+                                <div><p class="text-[10px] text-textSub">อายุ</p><p class="text-sm font-semibold text-textMain">${user.age || '-'}</p></div>
+                                <div><p class="text-[10px] text-textSub">เพศ</p><p class="text-sm font-semibold text-textMain">${user.gender || '-'}</p></div>
+                                <div><p class="text-[10px] text-textSub">ผู้ปกครอง</p><p class="text-sm font-semibold text-textMain">${user.parentName}</p></div>
+                                <div class="col-span-2"><p class="text-[10px] text-textSub">เบอร์โทรศัพท์</p><p class="text-sm font-semibold text-textMain">${user.phone}</p></div>
+                                
+                                <div class="col-span-2 border-t border-gray-200 my-1"></div>
+                                
+                                <div class="col-span-2"><p class="text-[10px] text-textSub">อาการ/สิ่งที่กังวล (Symptom)</p><p class="text-sm font-semibold text-textMain">${user.symptom || '-'}</p></div>
+                                <div class="col-span-2"><p class="text-[10px] text-textSub">ประวัติการแพ้ (Allergy)</p><p class="text-sm font-semibold ${user.allergy && user.allergy !== '-' && user.allergy !== 'ไม่มี' ? 'text-red-500' : 'text-textMain'}">${user.allergy || 'ไม่มีประวัติ'}</p></div>
+                            </div>
+                            
+                            <div class="mt-4 bg-orange-50 border border-orange-100 rounded-2xl p-4 flex justify-between items-center">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="star" class="w-5 h-5 text-orange-500"></i>
+                                    <span class="font-bold text-textMain text-sm">คะแนนสะสม</span>
+                                </div>
+                                <span class="text-xl font-bold text-primary">${points} <span class="text-xs font-normal text-textSub">แต้ม</span></span>
+                            </div>
+                        </div>
+
+                        ${assessment ? `
+                        <div class="bg-white p-6 rounded-3xl shadow-soft border border-gray-50">
+                            <div class="flex items-center gap-2 mb-4"><i data-lucide="activity" class="w-5 h-5 text-primary"></i><h3 class="text-lg font-bold text-textMain">ผลการประเมินครั้งแรก</h3></div>
+                            <div class="bg-[#F8F6F0] border border-[#EAE5D9] rounded-2xl p-4">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs text-textSub">${Utils.formatDate(assessment.assessment_date)}</span>
+                                    <span class="text-xs font-bold text-green-600 bg-white px-2 py-1 rounded-lg shadow-sm">Score: ${assessment.score}</span>
+                                </div>
+                                <p class="text-sm text-textMain font-medium mb-4 leading-relaxed">${assessment.summary}</p>
+                                <button onclick='Views.showAssessmentDetail(${JSON.stringify(assessment).replace(/'/g, "&apos;")})' class="w-full py-2 bg-white text-primary text-xs font-bold rounded-xl border border-primary/20 hover:bg-primaryLight transition-colors shadow-sm">
+                                    ดูรายละเอียด
+                                </button>
+                            </div>
+                        </div>` : ''}
+
+                        <button onclick="logout()" class="w-full py-4 bg-red-50 text-red-500 rounded-2xl font-bold text-sm mt-4 hover:bg-red-100 transition-colors flex justify-center items-center gap-2">
+                            <i data-lucide="log-out" class="w-4 h-4"></i> ออกจากระบบ
+                        </button>
+                    </div>
+                `;
+            },
+
+            showAssessmentDetail: (data) => {
+                const d = data.details || {};
+                const buildScoreRow = (label, val) => val && val !== '-' && val !== '' ? `<div class="flex justify-between py-2.5 border-b border-gray-100 last:border-0"><span class="text-xs text-textSub">${label}</span><span class="text-xs font-bold text-textMain text-right pl-4">${val}</span></div>` : '';
+                
+                const html = `
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-100">
+                            <i data-lucide="activity" class="w-8 h-8 text-orange-500"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-textMain mb-1">ผลการประเมินครั้งแรก</h3>
+                        <p class="text-sm text-textSub">${Utils.formatDate(data.assessment_date)}</p>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-[#F8F6F0] p-4 rounded-2xl border border-[#EAE5D9]">
+                            <h4 class="text-xs font-bold text-primary mb-2 flex items-center gap-1"><i data-lucide="star" class="w-3 h-3"></i> สรุปผลประเมิน (Score: ${data.score})</h4>
+                            <p class="text-sm text-textMain leading-relaxed">${data.summary}</p>
+                        </div>
+                        
+                        <div class="bg-white border border-gray-100 shadow-sm p-4 rounded-2xl">
+                            <h4 class="text-xs font-bold text-textMain mb-3 uppercase tracking-wider flex items-center gap-1"><i data-lucide="bar-chart-2" class="w-4 h-4"></i> รายละเอียดคะแนน</h4>
+                            ${buildScoreRow('Gross Motor (GM)', d['GM'] || d['gm'])}
+                            ${buildScoreRow('Fine Motor (FM)', d['FM'] || d['fm'])}
+                            ${buildScoreRow('Language (Lang)', d['Lang'] || d['lang'])}
+                            ${buildScoreRow('Social (Soc)', d['Soc'] || d['soc'])}
+                            ${buildScoreRow('Sensory Visual', d['SenVis'] || d['senvis'])}
+                            ${buildScoreRow('Sensory Hearing', d['SenHear'] || d['senhear'])}
+                            ${buildScoreRow('Sensory Movement', d['SenMove'] || d['senmove'])}
+                            ${buildScoreRow('Sensory Balance', d['SenBal'] || d['senbal'])}
+                            ${buildScoreRow('Sensory Taste/Smell', d['SenTaste'] || d['sentaste'])}
+                            ${buildScoreRow('Sensory Total', d['SenTotal6'] || d['sentotal6'])}
+                            ${buildScoreRow('Inattentive', d['SnInatt'] || d['sninatt'])}
+                            ${buildScoreRow('Hyperactive', d['SnHyper'] || d['snhyper'])}
+                            ${buildScoreRow('Oppositional (Odd)', d['SnOdd'] || d['snodd'])}
+                        </div>
+                    </div>
+                `;
+                Utils.openBottomSheet(html);
+            },
+
+            Admin: () => `
+                <div class="bg-gray-900 px-6 pt-6 pb-2 sticky top-0 z-20">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-white">Admin Panel</h2>
+                        <button onclick="logout()" class="text-red-400 text-sm font-bold flex items-center gap-1"><i data-lucide="log-out" class="w-4 h-4"></i> ออกจากระบบ</button>
+                    </div>
+                    <!-- Admin Tabs -->
+                    <div class="flex gap-4 overflow-x-auto pb-0 scrollbar-hide">
+                        <button onclick="adminSwitchTab('points')" id="admin-tab-points" class="whitespace-nowrap pb-3 text-sm font-bold text-primary border-b-2 border-primary px-1 transition-all">จัดการคะแนน</button>
+                        <button onclick="adminSwitchTab('settings')" id="admin-tab-settings" class="whitespace-nowrap pb-3 text-sm font-bold text-white/50 border-b-2 border-transparent px-1 transition-all">ตั้งค่าระบบ</button>
+                        <button onclick="adminSwitchTab('news')" id="admin-tab-news" class="whitespace-nowrap pb-3 text-sm font-bold text-white/50 border-b-2 border-transparent px-1 transition-all">จัดการข่าวสาร</button>
+                        <button onclick="adminSwitchTab('rewards')" id="admin-tab-rewards" class="whitespace-nowrap pb-3 text-sm font-bold text-white/50 border-b-2 border-transparent px-1 transition-all">ของรางวัล</button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <!-- Tab: Points -->
+                    <div id="admin-content-points" class="space-y-6 fade-in">
+                        <div class="bg-white p-5 rounded-2xl shadow-soft border border-gray-100">
+                            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i data-lucide="star" class="text-yellow-500"></i> จัดการคะแนนสะสม</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-xs text-textSub">1. ค้นหารหัสผู้ป่วย (HN)</label>
+                                    <div class="flex gap-2 mt-1">
+                                        <input type="text" id="admin-hn" class="flex-1 p-3 border rounded-xl text-sm bg-bgMain outline-none focus:border-primary" placeholder="เช่น 68001">
+                                        <button onclick="adminSearchUser()" class="bg-gray-800 text-white px-4 rounded-xl text-sm font-bold">ค้นหา</button>
+                                    </div>
+                                </div>
+                                
+                                <div id="admin-user-info" class="hidden bg-primaryLight p-4 rounded-xl border border-primary/20">
+                                    <p class="text-xs text-textSub">ชื่อ: <span id="admin-name" class="font-bold text-textMain"></span></p>
+                                    <p class="text-xs text-textSub mt-1">คะแนนปัจจุบัน: <span id="admin-points" class="font-bold text-primary text-lg"></span> แต้ม</p>
+                                </div>
+
+                                <div id="admin-point-action" class="hidden space-y-4 border-t pt-4">
+                                    <div>
+                                        <label class="text-xs text-textSub">2. ระบุจำนวนคะแนน (ใส่เครื่องหมาย - เพื่อลด)</label>
+                                        <input type="number" id="admin-point-change" class="w-full p-3 border rounded-xl text-sm bg-bgMain mt-1 outline-none focus:border-primary" placeholder="เช่น 500 หรือ -100">
+                                    </div>
+                                    <button onclick="adminUpdatePoints()" class="w-full bg-primary text-white py-3 rounded-xl font-bold text-sm shadow-soft">บันทึกคะแนน</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Settings -->
+                    <div id="admin-content-settings" class="space-y-6 hidden fade-in">
+                        <div class="bg-white p-5 rounded-2xl shadow-soft border border-gray-100">
+                            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i data-lucide="settings" class="text-gray-500"></i> ตั้งค่ารูปภาพระบบ</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-xs text-textSub">Main Image URL (หน้าล็อกอิน)</label>
+                                    <input type="text" id="admin-setting-main" class="w-full p-3 border rounded-xl text-sm bg-bgMain mt-1 outline-none focus:border-primary" placeholder="https://...">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-textSub">Logo URL</label>
+                                    <input type="text" id="admin-setting-logo" class="w-full p-3 border rounded-xl text-sm bg-bgMain mt-1 outline-none focus:border-primary" placeholder="https://...">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-textSub">Avatar URL (รูปเริ่มต้นผู้ใช้)</label>
+                                    <input type="text" id="admin-setting-avatar" class="w-full p-3 border rounded-xl text-sm bg-bgMain mt-1 outline-none focus:border-primary" placeholder="https://...">
+                                </div>
+                                <button onclick="adminSaveSettings()" class="w-full bg-primary text-white py-3 rounded-xl font-bold text-sm shadow-soft hover:bg-[#b89565] transition-colors">บันทึกการตั้งค่า</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: News -->
+                    <div id="admin-content-news" class="space-y-6 hidden fade-in">
+                        <div class="bg-white p-5 rounded-2xl shadow-soft border border-gray-100">
+                            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i data-lucide="newspaper" class="text-blue-500"></i> จัดการข่าวสาร</h3>
+                            
+                            <!-- ฟอร์มเพิ่มข่าว -->
+                            <div class="bg-bgMain p-4 rounded-xl space-y-3 mb-6 border border-gray-200">
+                                <div>
+                                    <label class="text-xs text-textSub font-bold">หัวข้อข่าว</label>
+                                    <input type="text" id="admin-news-title" class="w-full p-2.5 border rounded-lg text-sm mt-1 outline-none focus:border-blue-400" placeholder="ระบุหัวข้อข่าว">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-textSub font-bold">URL รูปภาพ</label>
+                                    <input type="text" id="admin-news-image" class="w-full p-2.5 border rounded-lg text-sm mt-1 outline-none focus:border-blue-400" placeholder="https://...">
+                                </div>
+                                <button onclick="adminAddNews()" class="w-full bg-blue-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-blue-600 transition">เพิ่มข่าวสารใหม่</button>
+                            </div>
+
+                            <!-- รายการข่าว -->
+                            <h4 class="text-sm font-bold text-textMain mb-3">ข่าวสารปัจจุบัน</h4>
+                            <div id="admin-news-list" class="space-y-3">
+                                <div class="text-center py-4 text-sm text-gray-400">กำลังโหลด...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Rewards -->
+                    <div id="admin-content-rewards" class="space-y-6 hidden fade-in">
+                        <div class="bg-white p-5 rounded-2xl shadow-soft border border-gray-100">
+                            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i data-lucide="gift" class="text-orange-500"></i> จัดการของรางวัล</h3>
+                            
+                            <!-- ฟอร์มเพิ่มรางวัล -->
+                            <div class="bg-bgMain p-4 rounded-xl space-y-3 mb-6 border border-gray-200">
+                                <div>
+                                    <label class="text-xs text-textSub font-bold">ชื่อของรางวัล</label>
+                                    <input type="text" id="admin-reward-name" class="w-full p-2.5 border rounded-lg text-sm mt-1 outline-none focus:border-orange-400" placeholder="เช่น ตุ๊กตาหมี">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-textSub font-bold">URL รูปภาพ</label>
+                                    <input type="text" id="admin-reward-image" class="w-full p-2.5 border rounded-lg text-sm mt-1 outline-none focus:border-orange-400" placeholder="https://...">
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-xs text-textSub font-bold">ใช้กี่คะแนน</label>
+                                        <input type="number" id="admin-reward-points" class="w-full p-2.5 border rounded-lg text-sm mt-1 outline-none focus:border-orange-400" placeholder="เช่น 500">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-textSub font-bold">จำนวนที่มี (ชิ้น)</label>
+                                        <input type="number" id="admin-reward-qty" class="w-full p-2.5 border rounded-lg text-sm mt-1 outline-none focus:border-orange-400" placeholder="เช่น 10">
+                                    </div>
+                                </div>
+                                <button onclick="adminAddReward()" class="w-full bg-orange-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-orange-600 transition">เพิ่มของรางวัล</button>
+                            </div>
+
+                            <!-- รายการของรางวัล -->
+                            <h4 class="text-sm font-bold text-textMain mb-3">ของรางวัลปัจจุบัน</h4>
+                            <div id="admin-rewards-list" class="space-y-3">
+                                <div class="text-center py-4 text-sm text-gray-400">กำลังโหลด...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        // =====================================
+        // LOGIC & ACTIONS
+        // =====================================
+        function adminSwitchTab(tabId) {
+            const tabs = ['points', 'settings', 'news', 'rewards'];
+            tabs.forEach(t => {
+                document.getElementById(`admin-content-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`admin-tab-${t}`);
+                btn.className = 'whitespace-nowrap pb-3 text-sm font-bold text-white/50 border-b-2 border-transparent px-1 transition-all';
+            });
+            document.getElementById(`admin-content-${tabId}`).classList.remove('hidden');
+            document.getElementById(`admin-tab-${tabId}`).className = 'whitespace-nowrap pb-3 text-sm font-bold text-primary border-b-2 border-primary px-1 transition-all';
+            
+            // โหลดข้อมูลเมื่อเปิดแท็บ
+            if(tabId === 'settings') adminLoadSettings();
+            if(tabId === 'news') adminLoadNews();
+            if(tabId === 'rewards') adminLoadRewards();
+        }
+
+        // --- Admin Settings Functions ---
+        async function adminLoadSettings() {
+            try {
+                const settings = await API.call('adminGetSettings', {}, false);
+                if (settings) {
+                    document.getElementById('admin-setting-main').value = settings.main_image_url || '';
+                    document.getElementById('admin-setting-logo').value = settings.logo_url || '';
+                    document.getElementById('admin-setting-avatar').value = settings.avatar_url || '';
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function adminSaveSettings() {
+            const main = document.getElementById('admin-setting-main').value.trim();
+            const logo = document.getElementById('admin-setting-logo').value.trim();
+            const avatar = document.getElementById('admin-setting-avatar').value.trim();
+            
+            try {
+                await API.call('adminSaveSettings', { main_image_url: main, logo_url: logo, avatar_url: avatar });
+                Swal.fire({icon:'success', title:'บันทึกสำเร็จ', timer:1500, showConfirmButton:false});
+            } catch(e) { Swal.fire('เกิดข้อผิดพลาด', e.message, 'error'); }
+        }
+
+        // --- Admin News Functions ---
+        async function adminLoadNews() {
+            try {
+                const news = await API.call('adminGetNews', {}, false);
+                const container = document.getElementById('admin-news-list');
+                if(!news || news.length === 0) {
+                    container.innerHTML = '<div class="text-center py-4 text-sm text-gray-400 border border-dashed rounded-xl">ไม่มีข่าวสาร</div>';
+                    return;
+                }
+                container.innerHTML = news.map(n => `
+                    <div class="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+                        <img src="${n.image_url}" class="w-16 h-12 object-cover rounded-md bg-gray-100">
+                        <div class="flex-1 min-w-0">
+                            <h5 class="text-sm font-bold text-textMain truncate">${n.title}</h5>
+                        </div>
+                        <button onclick="adminDeleteNews('${n.id}')" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            } catch(e) { console.error(e); }
+        }
+
+        async function adminAddNews() {
+            const title = document.getElementById('admin-news-title').value.trim();
+            const imageUrl = document.getElementById('admin-news-image').value.trim();
+            if(!title || !imageUrl) return Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกหัวข้อและรูปภาพ', 'warning');
+
+            try {
+                await API.call('adminAddNews', { title, imageUrl });
+                document.getElementById('admin-news-title').value = '';
+                document.getElementById('admin-news-image').value = '';
+                Swal.fire({icon:'success', title:'เพิ่มสำเร็จ', timer:1000, showConfirmButton:false});
+                adminLoadNews();
+                Cache.set('getDashboard', null); // รีเซ็ตแคชหน้าแรกให้ดึงข่าวใหม่
+            } catch(e) { Swal.fire('เกิดข้อผิดพลาด', e.message, 'error'); }
+        }
+
+        async function adminDeleteNews(id) {
+            Swal.fire({ title: 'ลบข่าวสาร?', icon: 'warning', showCancelButton: true, confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#ef4444' }).then(async (res) => {
+                if(res.isConfirmed) {
+                    try {
+                        await API.call('adminDeleteNews', { id });
+                        adminLoadNews();
+                        Cache.set('getDashboard', null);
+                    } catch(e) { Swal.fire('เกิดข้อผิดพลาด', e.message, 'error'); }
+                }
+            });
+        }
+
+        // --- Admin Rewards Functions ---
+        async function adminLoadRewards() {
+            try {
+                const rewards = await API.call('adminGetRewardsList', {}, false);
+                const container = document.getElementById('admin-rewards-list');
+                if(!rewards || rewards.length === 0) {
+                    container.innerHTML = '<div class="text-center py-4 text-sm text-gray-400 border border-dashed rounded-xl">ไม่มีของรางวัล</div>';
+                    return;
+                }
+                container.innerHTML = rewards.map(r => `
+                    <div class="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+                        <img src="${r.reward_url}" class="w-12 h-12 object-cover rounded-md bg-gray-100">
+                        <div class="flex-1 min-w-0">
+                            <h5 class="text-sm font-bold text-textMain truncate">${r.reward_name}</h5>
+                            <p class="text-[10px] text-textSub">ใช้ ${r.point_required} แต้ม • เหลือ ${r.quantity} ชิ้น</p>
+                        </div>
+                        <button onclick="adminDeleteReward('${r.id}')" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            } catch(e) { console.error(e); }
+        }
+
+        async function adminAddReward() {
+            const name = document.getElementById('admin-reward-name').value.trim();
+            const imageUrl = document.getElementById('admin-reward-image').value.trim();
+            const points = document.getElementById('admin-reward-points').value;
+            const qty = document.getElementById('admin-reward-qty').value;
+            
+            if(!name || !imageUrl || !points || !qty) return Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+
+            try {
+                await API.call('adminAddReward', { name, imageUrl, points, qty });
+                document.getElementById('admin-reward-name').value = '';
+                document.getElementById('admin-reward-image').value = '';
+                document.getElementById('admin-reward-points').value = '';
+                document.getElementById('admin-reward-qty').value = '';
+                Swal.fire({icon:'success', title:'เพิ่มสำเร็จ', timer:1000, showConfirmButton:false});
+                adminLoadRewards();
+                Cache.set('getRewards', null); // รีเซ็ตแคชหน้าคะแนน
+            } catch(e) { Swal.fire('เกิดข้อผิดพลาด', e.message, 'error'); }
+        }
+
+        async function adminDeleteReward(id) {
+            Swal.fire({ title: 'ลบของรางวัล?', icon: 'warning', showCancelButton: true, confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#ef4444' }).then(async (res) => {
+                if(res.isConfirmed) {
+                    try {
+                        await API.call('adminDeleteReward', { id });
+                        adminLoadRewards();
+                        Cache.set('getRewards', null);
+                    } catch(e) { Swal.fire('เกิดข้อผิดพลาด', e.message, 'error'); }
+                }
+            });
+        }
+
+        function switchTab(tabId) {
+            document.getElementById('tab-content-redeem').classList.add('hidden');
+            document.getElementById('tab-content-history').classList.add('hidden');
+            document.getElementById('tab-btn-redeem').className = 'pb-3 text-sm font-bold text-textSub border-b-2 border-transparent px-2 transition-all';
+            document.getElementById('tab-btn-history').className = 'pb-3 text-sm font-bold text-textSub border-b-2 border-transparent px-2 transition-all';
+
+            document.getElementById(`tab-content-${tabId}`).classList.remove('hidden');
+            if(tabId === 'redeem') document.getElementById('tab-content-redeem').classList.add('grid');
+            document.getElementById(`tab-btn-${tabId}`).className = 'pb-3 text-sm font-bold text-primary border-b-2 border-primary px-2 transition-all';
+        }
+
+        async function confirmRedeem(reward) {
+            if (window.currentPoints < reward.point_required || reward.quantity <= 0) return;
+
+            Swal.fire({
+                title: 'ยืนยันการแลกรางวัล?',
+                text: `ใช้ ${reward.point_required} แต้ม เพื่อแลก ${reward.reward_name}`,
+                imageUrl: reward.reward_url, imageWidth: 100, imageHeight: 100,
+                showCancelButton: true, confirmButtonColor: 'rgb(200, 169, 126)',
+                cancelButtonColor: '#EAEAEA', confirmButtonText: 'ยืนยันการแลก', cancelButtonText: '<span class="text-textMain">ยกเลิก</span>'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const res = await API.call('redeemReward', { hn: State.currentUser.hn, rewardId: reward.id });
+                        Cache.set('getRewards', null); // ล้างแคชหน้า Reward ใหม่ทันทีเมื่อแลกแต้ม
+                        Cache.set('getDashboard', null); 
+                        Swal.fire({
+                            icon: 'success', title: 'แลกรางวัลสำเร็จ!',
+                            html: `รหัสรับรางวัลของคุณคือ<br><br><div class="text-2xl font-mono font-bold tracking-widest bg-gray-100 p-3 rounded-lg inline-block">${res.couponCode}</div><br><br><span class="text-sm text-gray-500">แคปหน้าจอเพื่อรับรางวัลที่คลินิก</span>`,
+                            confirmButtonColor: 'rgb(200, 169, 126)'
+                        }).then(() => navigate('rewards'));
+                    } catch(err) {
+                        Swal.fire('ข้อผิดพลาด', err.message, 'error');
+                    }
+                }
+            });
+        }
+
+        async function adminSearchUser() {
+            const hn = document.getElementById('admin-hn').value.trim();
+            if(!hn) return;
+            try {
+                const data = await API.call('adminGetPatient', { hn });
+                document.getElementById('admin-name').innerText = data.name;
+                document.getElementById('admin-points').innerText = data.points;
+                document.getElementById('admin-user-info').classList.remove('hidden');
+                document.getElementById('admin-point-action').classList.remove('hidden');
+                window.adminSelectedHn = hn;
+            } catch(e) {
+                Swal.fire('ไม่พบข้อมูล', e.message, 'error');
+            }
+        }
+
+        async function adminUpdatePoints() {
+            const change = document.getElementById('admin-point-change').value;
+            if(!change) return;
+            try {
+                const res = await API.call('adminUpdatePoints', { hn: window.adminSelectedHn, pointChange: change });
+                Swal.fire('สำเร็จ', `อัปเดตคะแนนเรียบร้อยแล้ว<br>คะแนนล่าสุด: ${res.newPoints}`, 'success');
+                document.getElementById('admin-points').innerText = res.newPoints;
+                document.getElementById('admin-point-change').value = '';
+            } catch(e) {
+                Swal.fire('ข้อผิดพลาด', e.message, 'error');
+            }
+        }
+
+        function initSwiper() {
+            setTimeout(() => {
+                if(document.querySelector('.newsSwiper')) {
+                    new Swiper(".newsSwiper", { spaceBetween: 10, centeredSlides: true, autoplay: { delay: 3500, disableOnInteraction: false }, pagination: { el: ".swiper-pagination", clickable: true } });
+                }
+            }, 100);
+        }
+
+        document.getElementById('global-bottom-sheet').addEventListener('click', function(e) {
+            if(e.target === this) Utils.closeBottomSheet();
+        });
+
+        async function initApp() {
+            try {
+                // ดึงการตั้งค่าระบบ (ภาพพื้นหลังและโลโก้) ทันทีที่เข้าเว็บ
+                const settings = await API.call('getPublicSettings', {}, false);
+                State.settings = settings || {};
+            } catch(e) {
+                // เปลี่ยนจาก error เป็น warn เพื่อไม่ให้เด้งรบกวนเวลาหลังบ้านยังไม่ได้เปิดใช้ API getPublicSettings
+                console.warn("Failed to load settings:", e.message);
+            }
+
+            const savedSession = localStorage.getItem('hub_session');
+            if (savedSession) {
+                State.currentUser = JSON.parse(savedSession);
+                
+                // บังคับให้รูปโปรไฟล์ใช้รูป Logo จากการตั้งค่าเสมอ
+                if (State.settings.logo_url) {
+                    State.currentUser.avatar = State.settings.logo_url;
+                }
+
+                if(State.currentUser.role === 'admin') navigate('admin');
+                else navigate('dashboard');
+            } else {
+                navigate('landing');
+            }
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
