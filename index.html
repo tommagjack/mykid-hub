@@ -159,6 +159,10 @@
             settings: {}
         };
 
+        // State สำหรับ Admin Edit
+        window.editingNewsId = null;
+        window.editingRewardId = null;
+
         // =====================================
         // API SERVICE
         // =====================================
@@ -169,7 +173,6 @@
                 }
                 
                 try {
-                    // Send as plain text to avoid CORS preflight issues on Google Apps Script
                     const response = await fetch(GAS_API_URL, {
                         method: 'POST',
                         body: JSON.stringify({ action, payload })
@@ -182,7 +185,6 @@
                     return data.data;
                 } catch (error) {
                     if (showLoading) Swal.close();
-                    // โยน Error ให้ UI จัดการแสดงผล (SweetAlert) แทนการใช้ console.error
                     throw error;
                 }
             }
@@ -202,7 +204,6 @@
             }
         };
 
-        // Cache System สำหรับเร่งความเร็วการโหลดหน้าต่าง ๆ ให้ < 0.1 วิ (SWR Pattern)
         const Cache = {
             get: (key) => {
                 try { return JSON.parse(localStorage.getItem('hub_cache_' + key)); } 
@@ -221,22 +222,17 @@
             }
         };
 
-        // ฟังก์ชันล้างแคชเมื่อกดปุ่ม Refresh วงกลม
         function refreshPage(page) {
             const actionMap = { 'dashboard': 'getDashboard', 'appointments': 'getAppointments', 'history': 'getHistory', 'rewards': 'getRewards', 'profile': 'getProfile' };
             if(actionMap[page]) Cache.set(actionMap[page], null);
             navigate(page);
         }
 
-        // =====================================
-        // NAVIGATION CONTROLLER
-        // =====================================
         async function navigate(page) {
             State.currentPage = page;
             const mainContent = document.getElementById('main-content');
             const bottomNav = document.getElementById('bottom-nav');
             
-            // UI Reset & Active State
             document.querySelectorAll('.nav-item').forEach(el => {
                 el.classList.remove('text-primary'); el.classList.add('text-textSub');
             });
@@ -248,35 +244,13 @@
                 mainContent.className = 'pb-24 min-h-screen fade-in';
                 
                 switch(page) {
-                    case 'landing':
-                        bottomNav.classList.add('hidden');
-                        mainContent.innerHTML = Views.Landing();
-                        break;
-                    case 'dashboard':
-                        bottomNav.classList.remove('hidden');
-                        mainContent.innerHTML = Views.Dashboard(data);
-                        initSwiper();
-                        break;
-                    case 'appointments':
-                        bottomNav.classList.remove('hidden');
-                        mainContent.innerHTML = Views.Appointments(data);
-                        break;
-                    case 'history':
-                        bottomNav.classList.remove('hidden');
-                        mainContent.innerHTML = Views.History(data);
-                        break;
-                    case 'rewards':
-                        bottomNav.classList.remove('hidden');
-                        mainContent.innerHTML = Views.Rewards(data);
-                        break;
-                    case 'profile':
-                        bottomNav.classList.remove('hidden');
-                        mainContent.innerHTML = Views.Profile(data);
-                        break;
-                    case 'admin':
-                        bottomNav.classList.add('hidden');
-                        mainContent.innerHTML = Views.Admin();
-                        break;
+                    case 'landing': bottomNav.classList.add('hidden'); mainContent.innerHTML = Views.Landing(); break;
+                    case 'dashboard': bottomNav.classList.remove('hidden'); mainContent.innerHTML = Views.Dashboard(data); initSwiper(); break;
+                    case 'appointments': bottomNav.classList.remove('hidden'); mainContent.innerHTML = Views.Appointments(data); break;
+                    case 'history': bottomNav.classList.remove('hidden'); mainContent.innerHTML = Views.History(data); break;
+                    case 'rewards': bottomNav.classList.remove('hidden'); mainContent.innerHTML = Views.Rewards(data); break;
+                    case 'profile': bottomNav.classList.remove('hidden'); mainContent.innerHTML = Views.Profile(data); break;
+                    case 'admin': bottomNav.classList.add('hidden'); mainContent.innerHTML = Views.Admin(); break;
                 }
                 lucide.createIcons();
             };
@@ -286,31 +260,20 @@
                 return;
             }
 
-            const actionMap = {
-                'dashboard': 'getDashboard',
-                'appointments': 'getAppointments',
-                'history': 'getHistory',
-                'rewards': 'getRewards',
-                'profile': 'getProfile'
-            };
-
+            const actionMap = { 'dashboard': 'getDashboard', 'appointments': 'getAppointments', 'history': 'getHistory', 'rewards': 'getRewards', 'profile': 'getProfile' };
             const action = actionMap[page];
             const payload = { hn: State.currentUser.hn };
             
-            // 1. Try Cache for instant load (ทำให้ผู้ปกครองรู้สึกว่าโหลดเสร็จในเสี้ยววิ)
             const cachedData = Cache.get(action);
             if (cachedData) {
                 renderUI(cachedData);
-                // Background update แบบเงียบๆ ดึงข้อมูลใหม่ตลอด
                 API.call(action, payload, false).then(freshData => {
                     Cache.set(action, freshData);
-                    // อัปเดตหน้าจอแบบไร้รอยต่อ หากพบข้อมูลที่สดใหม่กว่า
                     if(page === State.currentPage && JSON.stringify(cachedData) !== JSON.stringify(freshData)) {
                         renderUI(freshData);
                     }
                 }).catch(()=>{});
             } else {
-                // 2. ถ้าเข้าครั้งแรก ยังไม่มี Cache ให้แสดง Loading Skeleton สวยๆ
                 const skeletonHtml = `
                     <div class="px-6 py-12 space-y-6 animate-pulse">
                         <div class="flex justify-between items-center mb-6">
@@ -348,7 +311,7 @@
                 const user = await API.call('login', { hn, phone });
                 State.currentUser = user;
                 localStorage.setItem('hub_session', JSON.stringify(user));
-                Cache.clear(); // ล้างแคชเก่าออกเผื่อสลับ Account
+                Cache.clear(); 
                 Utils.closeBottomSheet();
                 
                 if(user.role === 'admin') {
@@ -368,7 +331,7 @@
                 if (result.isConfirmed) {
                     State.currentUser = null;
                     localStorage.removeItem('hub_session');
-                    Cache.clear(); // ล้างข้อมูลแคช
+                    Cache.clear(); 
                     navigate('landing');
                 }
             });
@@ -682,7 +645,7 @@
                                 <div class="mt-auto pt-2 flex items-center justify-between">
                                     <span class="text-primary font-bold text-sm">${r.point_required} <span class="text-[10px] font-normal">แต้ม</span></span>
                                 </div>
-                                <button onclick='confirmRedeem(${JSON.stringify(r).replace(/'/g, "&apos;")})' class="w-full mt-3 py-2 bg-textMain text-white rounded-lg text-xs font-semibold ${window.currentPoints >= r.point_required && r.quantity > 0 ? 'hover:bg-black' : 'opacity-50 cursor-not-allowed'}">
+                                <button onclick='confirmRedeem(${JSON.stringify(r).replace(/'/g, "&apos;")})' ${window.currentPoints >= r.point_required && r.quantity > 0 ? '' : 'disabled'} class="w-full mt-3 py-2 bg-textMain text-white rounded-lg text-xs font-semibold ${window.currentPoints >= r.point_required && r.quantity > 0 ? 'hover:bg-black' : 'opacity-50 cursor-not-allowed'}">
                                     ${r.quantity <= 0 ? 'ของหมด' : (window.currentPoints >= r.point_required ? 'แลกรางวัล' : 'คะแนนไม่พอ')}
                                 </button>
                             </div>
@@ -813,6 +776,7 @@
                     <!-- Admin Tabs -->
                     <div class="flex gap-4 overflow-x-auto pb-0 scrollbar-hide">
                         <button onclick="adminSwitchTab('points')" id="admin-tab-points" class="whitespace-nowrap pb-3 text-sm font-bold text-primary border-b-2 border-primary px-1 transition-all">จัดการคะแนน</button>
+                        <button onclick="adminSwitchTab('admin-redeem')" id="admin-tab-admin-redeem" class="whitespace-nowrap pb-3 text-sm font-bold text-white/50 border-b-2 border-transparent px-1 transition-all">แลกให้ลูกค้า</button>
                         <button onclick="adminSwitchTab('settings')" id="admin-tab-settings" class="whitespace-nowrap pb-3 text-sm font-bold text-white/50 border-b-2 border-transparent px-1 transition-all">ตั้งค่าระบบ</button>
                         <button onclick="adminSwitchTab('news')" id="admin-tab-news" class="whitespace-nowrap pb-3 text-sm font-bold text-white/50 border-b-2 border-transparent px-1 transition-all">จัดการข่าวสาร</button>
                         <button onclick="adminSwitchTab('rewards')" id="admin-tab-rewards" class="whitespace-nowrap pb-3 text-sm font-bold text-white/50 border-b-2 border-transparent px-1 transition-all">ของรางวัล</button>
@@ -826,10 +790,10 @@
                             <div class="space-y-4">
                                 <div>
                                     <label class="text-xs text-textSub">1. ค้นหารหัสผู้ป่วย (HN)</label>
-                                    <div class="flex gap-2 mt-1">
+                                    <form onsubmit="event.preventDefault(); adminSearchUser();" class="flex gap-2 mt-1">
                                         <input type="text" id="admin-hn" class="flex-1 p-3 border rounded-xl text-sm bg-bgMain outline-none focus:border-primary" placeholder="เช่น 68001">
-                                        <button onclick="adminSearchUser()" class="bg-gray-800 text-white px-4 rounded-xl text-sm font-bold">ค้นหา</button>
-                                    </div>
+                                        <button type="submit" class="bg-gray-800 text-white px-4 rounded-xl text-sm font-bold">ค้นหา</button>
+                                    </form>
                                 </div>
                                 
                                 <div id="admin-user-info" class="hidden bg-primaryLight p-4 rounded-xl border border-primary/20">
@@ -837,12 +801,42 @@
                                     <p class="text-xs text-textSub mt-1">คะแนนปัจจุบัน: <span id="admin-points" class="font-bold text-primary text-lg"></span> แต้ม</p>
                                 </div>
 
-                                <div id="admin-point-action" class="hidden space-y-4 border-t pt-4">
+                                <div id="admin-point-action" class="hidden space-y-4 border-t pt-4 mt-4">
                                     <div>
                                         <label class="text-xs text-textSub">2. ระบุจำนวนคะแนน (ใส่เครื่องหมาย - เพื่อลด)</label>
                                         <input type="number" id="admin-point-change" class="w-full p-3 border rounded-xl text-sm bg-bgMain mt-1 outline-none focus:border-primary" placeholder="เช่น 500 หรือ -100">
                                     </div>
+                                    <div>
+                                        <label class="text-xs text-textSub">3. เหตุผล/รายละเอียด (ระบบจะบันทึกอัตโนมัติ)</label>
+                                        <input type="text" id="admin-point-reason" class="w-full p-3 border rounded-xl text-sm bg-bgMain mt-1 outline-none focus:border-primary" placeholder="เช่น ชดเชยคะแนน, ของขวัญพิเศษ">
+                                    </div>
                                     <button onclick="adminUpdatePoints()" class="w-full bg-primary text-white py-3 rounded-xl font-bold text-sm shadow-soft">บันทึกคะแนน</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Admin Redeem -->
+                    <div id="admin-content-admin-redeem" class="space-y-6 hidden fade-in">
+                        <div class="bg-white p-5 rounded-2xl shadow-soft border border-gray-100">
+                            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i data-lucide="gift" class="text-primary"></i> แลกรางวัลให้ลูกค้า</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-xs text-textSub">ค้นหารหัสผู้ป่วย (HN)</label>
+                                    <form onsubmit="event.preventDefault(); adminSearchRedeemUser();" class="flex gap-2 mt-1">
+                                        <input type="text" id="admin-redeem-hn" class="flex-1 p-3 border rounded-xl text-sm bg-bgMain outline-none focus:border-primary" placeholder="เช่น 68001">
+                                        <button type="submit" class="bg-gray-800 text-white px-4 rounded-xl text-sm font-bold">ค้นหา</button>
+                                    </form>
+                                </div>
+
+                                <div id="admin-redeem-user-info" class="hidden bg-primaryLight p-4 rounded-xl border border-primary/20">
+                                    <p class="text-xs text-textSub">ชื่อ: <span id="admin-redeem-name" class="font-bold text-textMain"></span></p>
+                                    <p class="text-xs text-textSub mt-1">คะแนนคงเหลือ: <span id="admin-redeem-points" class="font-bold text-primary text-lg"></span> แต้ม</p>
+                                </div>
+
+                                <div id="admin-redeem-rewards-list" class="hidden space-y-3 border-t pt-4">
+                                    <p class="text-sm font-bold text-textMain mb-2">เลือกของรางวัลที่ต้องการแลก</p>
+                                    <div id="admin-redeem-rewards-container" class="grid grid-cols-2 gap-3"></div>
                                 </div>
                             </div>
                         </div>
@@ -875,7 +869,7 @@
                         <div class="bg-white p-5 rounded-2xl shadow-soft border border-gray-100">
                             <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i data-lucide="newspaper" class="text-blue-500"></i> จัดการข่าวสาร</h3>
                             
-                            <!-- ฟอร์มเพิ่มข่าว -->
+                            <!-- ฟอร์มเพิ่ม/แก้ไข ข่าว -->
                             <div class="bg-bgMain p-4 rounded-xl space-y-3 mb-6 border border-gray-200">
                                 <div>
                                     <label class="text-xs text-textSub font-bold">หัวข้อข่าว</label>
@@ -885,7 +879,8 @@
                                     <label class="text-xs text-textSub font-bold">URL รูปภาพ</label>
                                     <input type="text" id="admin-news-image" class="w-full p-2.5 border rounded-lg text-sm mt-1 outline-none focus:border-blue-400" placeholder="https://...">
                                 </div>
-                                <button onclick="adminAddNews()" class="w-full bg-blue-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-blue-600 transition">เพิ่มข่าวสารใหม่</button>
+                                <button id="admin-news-submit-btn" onclick="adminSaveNews()" class="w-full bg-blue-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-blue-600 transition">เพิ่มข่าวสารใหม่</button>
+                                <button id="admin-news-cancel-btn" onclick="adminCancelEditNews()" class="w-full bg-gray-200 text-gray-700 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-300 transition hidden">ยกเลิกการแก้ไข</button>
                             </div>
 
                             <!-- รายการข่าว -->
@@ -901,7 +896,7 @@
                         <div class="bg-white p-5 rounded-2xl shadow-soft border border-gray-100">
                             <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i data-lucide="gift" class="text-orange-500"></i> จัดการของรางวัล</h3>
                             
-                            <!-- ฟอร์มเพิ่มรางวัล -->
+                            <!-- ฟอร์มเพิ่ม/แก้ไข รางวัล -->
                             <div class="bg-bgMain p-4 rounded-xl space-y-3 mb-6 border border-gray-200">
                                 <div>
                                     <label class="text-xs text-textSub font-bold">ชื่อของรางวัล</label>
@@ -921,7 +916,15 @@
                                         <input type="number" id="admin-reward-qty" class="w-full p-2.5 border rounded-lg text-sm mt-1 outline-none focus:border-orange-400" placeholder="เช่น 10">
                                     </div>
                                 </div>
-                                <button onclick="adminAddReward()" class="w-full bg-orange-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-orange-600 transition">เพิ่มของรางวัล</button>
+                                <div>
+                                    <label class="text-xs text-textSub font-bold">เงื่อนไขการแลก</label>
+                                    <select id="admin-reward-condition" class="w-full p-2.5 border rounded-lg text-sm mt-1 outline-none focus:border-orange-400 bg-white">
+                                        <option value="ลูกค้าแลกเองได้">ลูกค้าแลกเองได้</option>
+                                        <option value="แอดมินแลกให้เท่านั้น">แอดมินแลกให้เท่านั้น</option>
+                                    </select>
+                                </div>
+                                <button id="admin-reward-submit-btn" onclick="adminSaveReward()" class="w-full bg-orange-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-orange-600 transition">เพิ่มของรางวัล</button>
+                                <button id="admin-reward-cancel-btn" onclick="adminCancelEditReward()" class="w-full bg-gray-200 text-gray-700 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-300 transition hidden">ยกเลิกการแก้ไข</button>
                             </div>
 
                             <!-- รายการของรางวัล -->
@@ -942,21 +945,14 @@
             const img = document.createElement('img');
             img.src = url;
             const viewer = new Viewer(img, {
-                hidden: function () {
-                    viewer.destroy(); // ล้างข้อมูลจากหน่วยความจำเมื่อปิด
-                },
-                toolbar: false,      // ซ่อนแถบเครื่องมือด้านล่างให้ดู Minimal
-                navbar: false,       // ซ่อนแถบรูปภาพขนาดเล็กด้านล่าง
-                title: false,        // ซ่อนชื่อไฟล์รูปภาพ
-                button: true,        // แสดงปุ่ม X ปิดที่มุมขวาบน
-                backdrop: true,      // แสดงพื้นหลังสีดำ
-                zoomRatio: 0.2       // ความเร็วในการซูม
+                hidden: function () { viewer.destroy(); },
+                toolbar: false, navbar: false, title: false, button: true, backdrop: true, zoomRatio: 0.2
             });
             viewer.show();
         }
 
         function adminSwitchTab(tabId) {
-            const tabs = ['points', 'settings', 'news', 'rewards'];
+            const tabs = ['points', 'admin-redeem', 'settings', 'news', 'rewards'];
             tabs.forEach(t => {
                 document.getElementById(`admin-content-${t}`).classList.add('hidden');
                 const btn = document.getElementById(`admin-tab-${t}`);
@@ -965,7 +961,6 @@
             document.getElementById(`admin-content-${tabId}`).classList.remove('hidden');
             document.getElementById(`admin-tab-${tabId}`).className = 'whitespace-nowrap pb-3 text-sm font-bold text-primary border-b-2 border-primary px-1 transition-all';
             
-            // โหลดข้อมูลเมื่อเปิดแท็บ
             if(tabId === 'settings') adminLoadSettings();
             if(tabId === 'news') adminLoadNews();
             if(tabId === 'rewards') adminLoadRewards();
@@ -1009,25 +1004,51 @@
                         <div class="flex-1 min-w-0">
                             <h5 class="text-sm font-bold text-textMain truncate">${n.title}</h5>
                         </div>
-                        <button onclick="adminDeleteNews('${n.id}')" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <div class="flex gap-1">
+                            <button onclick="adminEditNews('${n.id}', '${n.title.replace(/'/g, "\\'")}', '${n.image_url}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                            <button onclick="adminDeleteNews('${n.id}')" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
                     </div>
                 `).join('');
                 lucide.createIcons();
             } catch(e) { console.error(e); }
         }
 
-        async function adminAddNews() {
+        function adminEditNews(id, title, url) {
+            window.editingNewsId = id;
+            document.getElementById('admin-news-title').value = title;
+            document.getElementById('admin-news-image').value = url;
+            document.getElementById('admin-news-submit-btn').innerText = 'บันทึกการแก้ไข';
+            document.getElementById('admin-news-submit-btn').classList.replace('bg-blue-500', 'bg-green-500');
+            document.getElementById('admin-news-cancel-btn').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function adminCancelEditNews() {
+            window.editingNewsId = null;
+            document.getElementById('admin-news-title').value = '';
+            document.getElementById('admin-news-image').value = '';
+            document.getElementById('admin-news-submit-btn').innerText = 'เพิ่มข่าวสารใหม่';
+            document.getElementById('admin-news-submit-btn').classList.replace('bg-green-500', 'bg-blue-500');
+            document.getElementById('admin-news-cancel-btn').classList.add('hidden');
+        }
+
+        async function adminSaveNews() {
             const title = document.getElementById('admin-news-title').value.trim();
             const imageUrl = document.getElementById('admin-news-image').value.trim();
             if(!title || !imageUrl) return Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกหัวข้อและรูปภาพ', 'warning');
 
             try {
-                await API.call('adminAddNews', { title, imageUrl });
-                document.getElementById('admin-news-title').value = '';
-                document.getElementById('admin-news-image').value = '';
-                Swal.fire({icon:'success', title:'เพิ่มสำเร็จ', timer:1000, showConfirmButton:false});
+                if (window.editingNewsId) {
+                    await API.call('adminUpdateNews', { id: window.editingNewsId, title, imageUrl });
+                    Swal.fire({icon:'success', title:'บันทึกการแก้ไขสำเร็จ', timer:1000, showConfirmButton:false});
+                } else {
+                    await API.call('adminAddNews', { title, imageUrl });
+                    Swal.fire({icon:'success', title:'เพิ่มสำเร็จ', timer:1000, showConfirmButton:false});
+                }
+                adminCancelEditNews();
                 adminLoadNews();
-                Cache.set('getDashboard', null); // รีเซ็ตแคชหน้าแรกให้ดึงข่าวใหม่
+                Cache.set('getDashboard', null); 
             } catch(e) { Swal.fire('เกิดข้อผิดพลาด', e.message, 'error'); }
         }
 
@@ -1058,31 +1079,63 @@
                         <div class="flex-1 min-w-0">
                             <h5 class="text-sm font-bold text-textMain truncate">${r.reward_name}</h5>
                             <p class="text-[10px] text-textSub">ใช้ ${r.point_required} แต้ม • เหลือ ${r.quantity} ชิ้น</p>
+                            <span class="text-[9px] font-bold ${r.condition === 'แอดมินแลกให้เท่านั้น' ? 'text-red-500 bg-red-50' : 'text-green-500 bg-green-50'} px-1.5 py-0.5 rounded-md inline-block mt-1">${r.condition || 'ลูกค้าแลกเองได้'}</span>
                         </div>
-                        <button onclick="adminDeleteReward('${r.id}')" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <div class="flex gap-1">
+                            <button onclick="adminEditReward('${r.id}', '${r.reward_name.replace(/'/g, "\\'")}', '${r.reward_url}', ${r.point_required}, ${r.quantity}, '${r.condition || 'ลูกค้าแลกเองได้'}')" class="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                            <button onclick="adminDeleteReward('${r.id}')" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
                     </div>
                 `).join('');
                 lucide.createIcons();
             } catch(e) { console.error(e); }
         }
 
-        async function adminAddReward() {
+        function adminEditReward(id, name, url, points, qty, condition) {
+            window.editingRewardId = id;
+            document.getElementById('admin-reward-name').value = name;
+            document.getElementById('admin-reward-image').value = url;
+            document.getElementById('admin-reward-points').value = points;
+            document.getElementById('admin-reward-qty').value = qty;
+            document.getElementById('admin-reward-condition').value = condition || 'ลูกค้าแลกเองได้';
+            document.getElementById('admin-reward-submit-btn').innerText = 'บันทึกการแก้ไข';
+            document.getElementById('admin-reward-submit-btn').classList.replace('bg-orange-500', 'bg-green-500');
+            document.getElementById('admin-reward-cancel-btn').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function adminCancelEditReward() {
+            window.editingRewardId = null;
+            document.getElementById('admin-reward-name').value = '';
+            document.getElementById('admin-reward-image').value = '';
+            document.getElementById('admin-reward-points').value = '';
+            document.getElementById('admin-reward-qty').value = '';
+            document.getElementById('admin-reward-condition').value = 'ลูกค้าแลกเองได้';
+            document.getElementById('admin-reward-submit-btn').innerText = 'เพิ่มของรางวัล';
+            document.getElementById('admin-reward-submit-btn').classList.replace('bg-green-500', 'bg-orange-500');
+            document.getElementById('admin-reward-cancel-btn').classList.add('hidden');
+        }
+
+        async function adminSaveReward() {
             const name = document.getElementById('admin-reward-name').value.trim();
             const imageUrl = document.getElementById('admin-reward-image').value.trim();
             const points = document.getElementById('admin-reward-points').value;
             const qty = document.getElementById('admin-reward-qty').value;
+            const condition = document.getElementById('admin-reward-condition').value;
             
             if(!name || !imageUrl || !points || !qty) return Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
 
             try {
-                await API.call('adminAddReward', { name, imageUrl, points, qty });
-                document.getElementById('admin-reward-name').value = '';
-                document.getElementById('admin-reward-image').value = '';
-                document.getElementById('admin-reward-points').value = '';
-                document.getElementById('admin-reward-qty').value = '';
-                Swal.fire({icon:'success', title:'เพิ่มสำเร็จ', timer:1000, showConfirmButton:false});
+                if (window.editingRewardId) {
+                    await API.call('adminUpdateReward', { id: window.editingRewardId, name, imageUrl, points, qty, condition });
+                    Swal.fire({icon:'success', title:'บันทึกการแก้ไขสำเร็จ', timer:1000, showConfirmButton:false});
+                } else {
+                    await API.call('adminAddReward', { name, imageUrl, points, qty, condition });
+                    Swal.fire({icon:'success', title:'เพิ่มสำเร็จ', timer:1000, showConfirmButton:false});
+                }
+                adminCancelEditReward();
                 adminLoadRewards();
-                Cache.set('getRewards', null); // รีเซ็ตแคชหน้าคะแนน
+                Cache.set('getRewards', null); 
             } catch(e) { Swal.fire('เกิดข้อผิดพลาด', e.message, 'error'); }
         }
 
@@ -1098,6 +1151,7 @@
             });
         }
 
+        // --- Admin Tools (Points & Redeem) ---
         function switchTab(tabId) {
             document.getElementById('tab-content-redeem').classList.add('hidden');
             document.getElementById('tab-content-history').classList.add('hidden');
@@ -1122,7 +1176,7 @@
                 if (result.isConfirmed) {
                     try {
                         const res = await API.call('redeemReward', { hn: State.currentUser.hn, rewardId: reward.id });
-                        Cache.set('getRewards', null); // ล้างแคชหน้า Reward ใหม่ทันทีเมื่อแลกแต้ม
+                        Cache.set('getRewards', null); 
                         Cache.set('getDashboard', null); 
                         Swal.fire({
                             icon: 'success', title: 'แลกรางวัลสำเร็จ!',
@@ -1153,15 +1207,82 @@
 
         async function adminUpdatePoints() {
             const change = document.getElementById('admin-point-change').value;
-            if(!change) return;
+            const reason = document.getElementById('admin-point-reason').value.trim();
+            if(!change) return Swal.fire('โปรดระบุคะแนน', 'กรุณาระบุคะแนนที่ต้องการเพิ่มหรือลด', 'warning');
+            if(!reason) return Swal.fire('โปรดระบุเหตุผล', 'กรุณาระบุเหตุผลการเพิ่ม/ลดคะแนน', 'warning');
+
             try {
-                const res = await API.call('adminUpdatePoints', { hn: window.adminSelectedHn, pointChange: change });
+                const res = await API.call('adminUpdatePoints', { hn: window.adminSelectedHn, pointChange: change, reason: reason });
                 Swal.fire('สำเร็จ', `อัปเดตคะแนนเรียบร้อยแล้ว<br>คะแนนล่าสุด: ${res.newPoints}`, 'success');
                 document.getElementById('admin-points').innerText = res.newPoints;
                 document.getElementById('admin-point-change').value = '';
+                document.getElementById('admin-point-reason').value = '';
             } catch(e) {
                 Swal.fire('ข้อผิดพลาด', e.message, 'error');
             }
+        }
+
+        async function adminSearchRedeemUser() {
+            const hn = document.getElementById('admin-redeem-hn').value.trim();
+            if(!hn) return;
+            try {
+                const data = await API.call('adminGetPatient', { hn });
+                window.adminSelectedRedeemHn = hn;
+                window.adminSelectedRedeemPoints = data.points;
+                
+                document.getElementById('admin-redeem-name').innerText = data.name;
+                document.getElementById('admin-redeem-points').innerText = data.points;
+                document.getElementById('admin-redeem-user-info').classList.remove('hidden');
+                
+                const rewards = await API.call('adminGetRewardsList', {}, false);
+                const container = document.getElementById('admin-redeem-rewards-container');
+                if(!rewards || rewards.length === 0) {
+                    container.innerHTML = '<p class="col-span-2 text-sm text-center text-gray-400 py-4">ไม่มีของรางวัลในระบบ</p>';
+                } else {
+                    container.innerHTML = rewards.map(r => `
+                        <div class="bg-bgMain rounded-2xl p-3 border border-gray-100 flex flex-col">
+                            <img src="${r.reward_url}" class="w-full h-24 object-cover rounded-xl mb-2">
+                            <h4 class="font-bold text-xs text-textMain line-clamp-2 mb-1">${r.reward_name}</h4>
+                            <span class="text-primary font-bold text-xs mb-2">${r.point_required} แต้ม (เหลือ ${r.quantity})</span>
+                            <button onclick='adminConfirmRedeemForUser(${JSON.stringify(r).replace(/'/g, "&apos;")})' ${data.points >= r.point_required && r.quantity > 0 ? '' : 'disabled'} class="w-full mt-auto py-2 bg-primary text-white rounded-lg text-xs font-semibold ${data.points >= r.point_required && r.quantity > 0 ? '' : 'opacity-50 cursor-not-allowed'}">
+                                ${r.quantity <= 0 ? 'ของหมด' : (data.points >= r.point_required ? 'แลกให้ลูกค้า' : 'แต้มไม่พอ')}
+                            </button>
+                        </div>
+                    `).join('');
+                }
+                document.getElementById('admin-redeem-rewards-list').classList.remove('hidden');
+                
+            } catch(e) {
+                Swal.fire('ไม่พบข้อมูล', e.message, 'error');
+            }
+        }
+
+        async function adminConfirmRedeemForUser(reward) {
+            const currentPoints = window.adminSelectedRedeemPoints;
+            const hn = window.adminSelectedRedeemHn;
+
+            if (currentPoints < reward.point_required || reward.quantity <= 0) return;
+
+            Swal.fire({
+                title: 'ยืนยันการแลกให้ลูกค้า?',
+                text: `ตัด ${reward.point_required} แต้ม จาก HN: ${hn} เพื่อแลก ${reward.reward_name}`,
+                showCancelButton: true, confirmButtonColor: 'rgb(200, 169, 126)', confirmButtonText: 'ยืนยันการแลก', cancelButtonText: 'ยกเลิก'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const res = await API.call('redeemReward', { hn: hn, rewardId: reward.id });
+                        Swal.fire({
+                            icon: 'success', title: 'แลกรางวัลสำเร็จ!',
+                            html: `คูปองสำหรับลูกค้ารหัสนี้คือ<br><br><div class="text-2xl font-mono font-bold bg-gray-100 p-3 rounded-lg inline-block">${res.couponCode}</div>`,
+                            confirmButtonColor: 'rgb(200, 169, 126)'
+                        });
+                        // รีเฟรชข้อมูลโชว์แต้มที่ลดลงทันที
+                        adminSearchRedeemUser();
+                    } catch(err) {
+                        Swal.fire('ข้อผิดพลาด', err.message, 'error');
+                    }
+                }
+            });
         }
 
         function initSwiper() {
@@ -1178,23 +1299,17 @@
 
         async function initApp() {
             try {
-                // ดึงการตั้งค่าระบบ (ภาพพื้นหลังและโลโก้) ทันทีที่เข้าเว็บ
                 const settings = await API.call('getPublicSettings', {}, false);
                 State.settings = settings || {};
             } catch(e) {
-                // เปลี่ยนจาก error เป็น warn เพื่อไม่ให้เด้งรบกวนเวลาหลังบ้านยังไม่ได้เปิดใช้ API getPublicSettings
                 console.warn("Failed to load settings:", e.message);
             }
 
             const savedSession = localStorage.getItem('hub_session');
             if (savedSession) {
                 State.currentUser = JSON.parse(savedSession);
+                if (State.settings.logo_url) State.currentUser.avatar = State.settings.logo_url;
                 
-                // บังคับให้รูปโปรไฟล์ใช้รูป Logo จากการตั้งค่าเสมอ
-                if (State.settings.logo_url) {
-                    State.currentUser.avatar = State.settings.logo_url;
-                }
-
                 if(State.currentUser.role === 'admin') navigate('admin');
                 else navigate('dashboard');
             } else {
