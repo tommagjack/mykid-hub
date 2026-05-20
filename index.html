@@ -923,6 +923,10 @@
                                         <option value="แอดมินแลกให้เท่านั้น">แอดมินแลกให้เท่านั้น</option>
                                     </select>
                                 </div>
+                                <div>
+                                    <label class="text-xs text-textSub font-bold">รายละเอียด/เงื่อนไขเพิ่มเติม</label>
+                                    <textarea id="admin-reward-details" rows="2" class="w-full p-2.5 border rounded-lg text-sm mt-1 outline-none focus:border-orange-400 bg-white" placeholder="ระบุรายละเอียด เช่น หมดเขตวันไหน หรือหมายเหตุอื่นๆ"></textarea>
+                                </div>
                                 <button id="admin-reward-submit-btn" onclick="adminSaveReward()" class="w-full bg-orange-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-orange-600 transition">เพิ่มของรางวัล</button>
                                 <button id="admin-reward-cancel-btn" onclick="adminCancelEditReward()" class="w-full bg-gray-200 text-gray-700 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-300 transition hidden">ยกเลิกการแก้ไข</button>
                             </div>
@@ -1068,6 +1072,8 @@
         async function adminLoadRewards() {
             try {
                 const rewards = await API.call('adminGetRewardsList', {}, false);
+                window.adminRewardsList = rewards; // เก็บไว้ในตัวแปรเพื่อป้องกัน Error อักขระพิเศษตอนแก้ไข
+                
                 const container = document.getElementById('admin-rewards-list');
                 if(!rewards || rewards.length === 0) {
                     container.innerHTML = '<div class="text-center py-4 text-sm text-gray-400 border border-dashed rounded-xl">ไม่มีของรางวัล</div>';
@@ -1082,7 +1088,7 @@
                             <span class="text-[9px] font-bold ${r.condition === 'แอดมินแลกให้เท่านั้น' ? 'text-red-500 bg-red-50' : 'text-green-500 bg-green-50'} px-1.5 py-0.5 rounded-md inline-block mt-1">${r.condition || 'ลูกค้าแลกเองได้'}</span>
                         </div>
                         <div class="flex gap-1">
-                            <button onclick="adminEditReward('${r.id}', '${r.reward_name.replace(/'/g, "\\'")}', '${r.reward_url}', ${r.point_required}, ${r.quantity}, '${r.condition || 'ลูกค้าแลกเองได้'}')" class="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                            <button onclick="adminEditReward('${r.id}')" class="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition"><i data-lucide="edit" class="w-4 h-4"></i></button>
                             <button onclick="adminDeleteReward('${r.id}')" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                         </div>
                     </div>
@@ -1091,13 +1097,18 @@
             } catch(e) { console.error(e); }
         }
 
-        function adminEditReward(id, name, url, points, qty, condition) {
+        function adminEditReward(id) {
+            const r = window.adminRewardsList.find(item => item.id === id);
+            if(!r) return;
+            
             window.editingRewardId = id;
-            document.getElementById('admin-reward-name').value = name;
-            document.getElementById('admin-reward-image').value = url;
-            document.getElementById('admin-reward-points').value = points;
-            document.getElementById('admin-reward-qty').value = qty;
-            document.getElementById('admin-reward-condition').value = condition || 'ลูกค้าแลกเองได้';
+            document.getElementById('admin-reward-name').value = r.reward_name || '';
+            document.getElementById('admin-reward-image').value = r.reward_url || '';
+            document.getElementById('admin-reward-points').value = r.point_required || '';
+            document.getElementById('admin-reward-qty').value = r.quantity || '';
+            document.getElementById('admin-reward-condition').value = r.condition || 'ลูกค้าแลกเองได้';
+            document.getElementById('admin-reward-details').value = r.details || '';
+            
             document.getElementById('admin-reward-submit-btn').innerText = 'บันทึกการแก้ไข';
             document.getElementById('admin-reward-submit-btn').classList.replace('bg-orange-500', 'bg-green-500');
             document.getElementById('admin-reward-cancel-btn').classList.remove('hidden');
@@ -1111,6 +1122,7 @@
             document.getElementById('admin-reward-points').value = '';
             document.getElementById('admin-reward-qty').value = '';
             document.getElementById('admin-reward-condition').value = 'ลูกค้าแลกเองได้';
+            document.getElementById('admin-reward-details').value = '';
             document.getElementById('admin-reward-submit-btn').innerText = 'เพิ่มของรางวัล';
             document.getElementById('admin-reward-submit-btn').classList.replace('bg-green-500', 'bg-orange-500');
             document.getElementById('admin-reward-cancel-btn').classList.add('hidden');
@@ -1122,15 +1134,16 @@
             const points = document.getElementById('admin-reward-points').value;
             const qty = document.getElementById('admin-reward-qty').value;
             const condition = document.getElementById('admin-reward-condition').value;
+            const details = document.getElementById('admin-reward-details').value.trim();
             
             if(!name || !imageUrl || !points || !qty) return Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
 
             try {
                 if (window.editingRewardId) {
-                    await API.call('adminUpdateReward', { id: window.editingRewardId, name, imageUrl, points, qty, condition });
+                    await API.call('adminUpdateReward', { id: window.editingRewardId, name, imageUrl, points, qty, condition, details });
                     Swal.fire({icon:'success', title:'บันทึกการแก้ไขสำเร็จ', timer:1000, showConfirmButton:false});
                 } else {
-                    await API.call('adminAddReward', { name, imageUrl, points, qty, condition });
+                    await API.call('adminAddReward', { name, imageUrl, points, qty, condition, details });
                     Swal.fire({icon:'success', title:'เพิ่มสำเร็จ', timer:1000, showConfirmButton:false});
                 }
                 adminCancelEditReward();
@@ -1166,9 +1179,11 @@
         async function confirmRedeem(reward) {
             if (window.currentPoints < reward.point_required || reward.quantity <= 0) return;
 
+            const detailsHtml = reward.details ? `<div style="font-size: 12px; color: #666; background: #f9fafb; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: left;"><b>เงื่อนไข/รายละเอียด:</b><br>${reward.details.replace(/\n/g, '<br>')}</div>` : '';
+
             Swal.fire({
                 title: 'ยืนยันการแลกรางวัล?',
-                text: `ใช้ ${reward.point_required} แต้ม เพื่อแลก ${reward.reward_name}`,
+                html: `ใช้ <b>${reward.point_required} แต้ม</b> เพื่อแลก <b>${reward.reward_name}</b>${detailsHtml}`,
                 imageUrl: reward.reward_url, imageWidth: 100, imageHeight: 100,
                 showCancelButton: true, confirmButtonColor: 'rgb(200, 169, 126)',
                 cancelButtonColor: '#EAEAEA', confirmButtonText: 'ยืนยันการแลก', cancelButtonText: '<span class="text-textMain">ยกเลิก</span>'
